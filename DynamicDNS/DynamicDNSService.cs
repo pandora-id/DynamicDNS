@@ -89,14 +89,20 @@ namespace DynamicDNS
                 }
 
                 var publicIpv4Address = await GetPublicIpv4Address();
-                serviceEventLog.WriteEntry($"[Zone: {zone.Name}] Updating DNS Record of {recordName} to {publicIpv4Address}.",
-                    EventLogEntryType.Information, eventId++);
+                if (publicIpv4Address == dnsRecord.Content)
+                {
+                    serviceEventLog.WriteEntry($"[Zone: {zone.Name}] DNS Record {recordName} already pointed to {publicIpv4Address}.",
+                        EventLogEntryType.Information, eventId++);
+                    return;
+                }
 
+                serviceEventLog.WriteEntry($"[Zone: {zone.Name}] Pointing DNS Record {recordName} to {publicIpv4Address}.",
+                    EventLogEntryType.Information, eventId++);
                 dnsRecord.Content = publicIpv4Address;
                 var patchedDnsRecord = await PatchDnsRecord(zone, dnsRecord);
                 if (patchedDnsRecord is null)
                 {
-                    throw new Exception($"[Zone: {zone.Name}] Invalid response received from CloudFlare API.");
+                    throw new Exception($"[Zone: {zone.Name}] Received invalid response from Cloudflare API.");
                 }
 
                 serviceEventLog.WriteEntry($"[Zone: {zone.Name}] New configuration applied for DNS Record {dnsRecord.Name}.",
